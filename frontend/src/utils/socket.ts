@@ -1,9 +1,12 @@
 import { io, Socket } from 'socket.io-client';
 import type { Queue } from '@/store/queueStore';
 
-// In development with Vite proxy, connect to same origin
-// In production, use the backend URL from env
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
+// In development, use empty string to leverage Vite's proxy (falls back to window.location.origin)
+// In production, use the full socket URL from environment
+const SOCKET_URL =
+  import.meta.env.MODE === 'production'
+    ? import.meta.env.VITE_SOCKET_URL
+    : '';
 
 interface QueueUpdatePayload {
   queue: Queue;

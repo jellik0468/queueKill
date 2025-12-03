@@ -1,7 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// In development, use empty string to leverage Vite's proxy
+// In production, use the full API URL from environment
+const API_BASE_URL =
+  import.meta.env.MODE === 'production'
+    ? import.meta.env.VITE_API_URL
+    : '/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
