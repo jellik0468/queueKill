@@ -140,7 +140,14 @@ export async function updateMyRestaurantHandler(
       return;
     }
 
-    const { name, address, type, description, longDescription, menuText } = req.body;
+    const { name, address, type, description, longDescription, menuText } = req.body as {
+      name?: string;
+      address?: string;
+      type?: string;
+      description?: string;
+      longDescription?: string;
+      menuText?: string;
+    };
 
     const updated = await restaurantService.updateRestaurant(restaurant.id, req.user.userId, {
       name,

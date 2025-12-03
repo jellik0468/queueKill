@@ -30,6 +30,7 @@
       "@services/*": ["services/*"],
       "@sockets/*": ["sockets/*"],
       "@utils/*": ["utils/*"],
+      "@types/*": ["types/*"]
     }
   },
   "include": ["src/**/*"],

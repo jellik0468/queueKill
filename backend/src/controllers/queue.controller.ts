@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../types';
+import { AuthRequest, CreateQueueInput, JoinQueueInput } from '../types';
 import * as queueService from '../services/queue.service';
 import { 
   broadcastQueueUpdate, 
@@ -115,7 +115,7 @@ export async function createQueueHandler(
       return;
     }
 
-    const data = req.body;
+    const data = req.body as CreateQueueInput;
     const queue = await queueService.createQueue(restaurant.id, data);
 
     res.status(201).json({
@@ -163,7 +163,7 @@ export async function joinQueueHandler(
   try {
     const { queueId } = req.params;
     const userId = req.user?.userId || null;
-    const data = req.body;
+    const data = req.body as JoinQueueInput;
 
     const entry = await queueService.joinQueue(queueId, userId, data);
 

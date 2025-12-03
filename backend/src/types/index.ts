@@ -1,4 +1,6 @@
 import { Request } from 'express';
+import { ParamsDictionary } from 'express-serve-static-core';
+import { ParsedQs } from 'qs';
 import { Role } from '@prisma/client';
 
 // JWT Payload
@@ -10,13 +12,23 @@ export interface JwtPayload {
   exp?: number;
 }
 
-// Authenticated Request
-export interface AuthRequest extends Request {
+// Authenticated Request - generic to preserve body, params, query types
+export interface AuthRequest<
+  P = ParamsDictionary,
+  ResBody = unknown,
+  ReqBody = unknown,
+  ReqQuery = ParsedQs,
+> extends Request<P, ResBody, ReqBody, ReqQuery> {
   user?: JwtPayload;
 }
 
 // Alias for middleware compatibility
-export interface RequestWithUser extends Request {
+export interface RequestWithUser<
+  P = ParamsDictionary,
+  ResBody = unknown,
+  ReqBody = unknown,
+  ReqQuery = ParsedQs,
+> extends Request<P, ResBody, ReqBody, ReqQuery> {
   user?: JwtPayload;
 }
 
