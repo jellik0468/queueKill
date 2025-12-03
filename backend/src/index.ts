@@ -29,16 +29,19 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Determine the external URL for logging
+  const externalUrl = process.env.RENDER_EXTERNAL_URL || `http://${config.host}:${config.port}`;
+  
   // Start server
   httpServer.listen(config.port, config.host, () => {
     console.info(`
 🚀 Server is running!
-   
-   Environment: ${config.nodeEnv}
-   URL: http://${config.host}:${config.port}
-   API: http://${config.host}:${config.port}/api
-   Health: http://${config.host}:${config.port}/api/health
-    `);
+    
+    Environment: ${config.nodeEnv}
+    URL: ${externalUrl}
+    API: ${externalUrl}/api
+    Health: ${externalUrl}/api/health
+     `);
   });
 
   // Graceful shutdown
@@ -73,4 +76,3 @@ main().catch((error) => {
   console.error('Failed to start server:', error);
   process.exit(1);
 });
-
