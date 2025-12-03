@@ -1,4 +1,4 @@
-import { User, Restaurant } from '@prisma/client';
+import { User } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signToken } from '../utils/jwt';
