@@ -20,7 +20,7 @@ export function signToken(payload: JwtPayload): string {
 export function generateAccessToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): string {
   const options: SignOptions = {
     algorithm: 'HS256',
-    expiresIn: config.jwt.accessExpiration,
+    expiresIn: config.jwt.accessExpiration as SignOptions['expiresIn'],
   };
 
   return jwt.sign(payload, config.jwt.secret, options);
@@ -32,7 +32,7 @@ export function generateAccessToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): s
 export function generateRefreshToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): string {
   const options: SignOptions = {
     algorithm: 'HS256',
-    expiresIn: config.jwt.refreshExpiration,
+    expiresIn: config.jwt.refreshExpiration as SignOptions['expiresIn'],
   };
 
   return jwt.sign(payload, config.jwt.secret, options);

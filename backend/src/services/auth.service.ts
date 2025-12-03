@@ -61,6 +61,7 @@ class AuthService {
     // Generate token
     const token = signToken({
       userId: user.id,
+      email: user.email,
       role: user.role,
     });
 
@@ -134,6 +135,7 @@ class AuthService {
     // Generate token
     const token = signToken({
       userId: result.user.id,
+      email: result.user.email,
       role: result.user.role,
     });
 
@@ -187,6 +189,7 @@ class AuthService {
     // Generate JWT
     const token = signToken({
       userId: user.id,
+      email: user.email,
       role: user.role,
     });
 
