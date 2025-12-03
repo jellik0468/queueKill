@@ -16,6 +16,11 @@ export const registerOwnerSchema = z.object({
   phone: z.string().optional(),
   restaurantName: z.string().min(1, 'Restaurant name is required'),
   restaurantAddress: z.string().min(1, 'Restaurant address is required'),
+  restaurantType: z.string().optional(),
+  restaurantDescription: z.string().optional(),
+  restaurantLongDescription: z.string().optional(),
+  restaurantMenuText: z.string().optional(),
+  initialQueueName: z.string().optional(), // Optional queue to create during registration
 });
 
 // Login Schema

@@ -1,95 +1,73 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { config } from '../config';
-import { verifyToken } from '../utils/jwt';
-import {
-  ServerToClientEvents,
-  ClientToServerEvents,
-  InterServerEvents,
-  SocketData,
-} from '../types';
 
-type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
-
-let io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
+let io: Server | null = null;
 
 /**
  * Initialize Socket.IO server
  */
-export function initializeSocket(httpServer: HttpServer): Server {
-  io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
-    httpServer,
-    {
-      cors: {
-        origin: config.socket.corsOrigin,
-        methods: ['GET', 'POST'],
-        credentials: true,
-      },
-      pingTimeout: 60000,
-      pingInterval: 25000,
-    }
-  );
-
-  // Authentication middleware
-  io.use((socket, next) => {
-    try {
-      const token = socket.handshake.auth.token as string | undefined;
-
-      if (!token) {
-        return next(new Error('Authentication token required'));
-      }
-
-      const payload = verifyToken(token);
-      socket.data.userId = payload.userId;
-      socket.data.email = payload.email;
-      socket.data.role = payload.role;
-
-      next();
-    } catch (error) {
-      next(new Error('Invalid authentication token'));
-    }
+export function initSocket(server: HttpServer): Server {
+  io = new Server(server, {
+    cors: {
+      origin: [
+        config.app.frontendUrl,
+        config.cors.origin,
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+      ],
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
-  // Connection handler
-  io.on('connection', (socket: TypedSocket) => {
-    console.info(`User connected: ${socket.data.userId}`);
+  console.log('[socket.io] Server initialized with CORS:', config.app.frontendUrl);
 
-    // Join user's personal room
-    void socket.join(`user:${socket.data.userId}`);
+  io.on('connection', (socket: Socket) => {
+    console.log('[socket] Client connected:', socket.id);
 
-    // Notify others about connection
-    socket.broadcast.emit('userConnected', { userId: socket.data.userId });
-
-    // Handle room joining
-    socket.on('joinRoom', (roomId: string) => {
-      void socket.join(roomId);
-      console.info(`User ${socket.data.userId} joined room: ${roomId}`);
+    // Join a queue room for real-time updates
+    socket.on('joinQueueRoom', (queueId: string) => {
+      const room = `queue-${queueId}`;
+      void socket.join(room);
+      console.log(`[socket] ${socket.id} joined room: ${room}`);
+      
+      // Log current rooms
+      const rooms = Array.from(socket.rooms);
+      console.log(`[socket] ${socket.id} is now in rooms:`, rooms);
     });
 
-    // Handle room leaving
-    socket.on('leaveRoom', (roomId: string) => {
-      void socket.leave(roomId);
-      console.info(`User ${socket.data.userId} left room: ${roomId}`);
+    // Leave a queue room
+    socket.on('leaveQueueRoom', (queueId: string) => {
+      const room = `queue-${queueId}`;
+      void socket.leave(room);
+      console.log(`[socket] ${socket.id} left room: ${room}`);
     });
 
-    // Handle messages
-    socket.on('sendMessage', (data: { roomId: string; message: string }) => {
-      io.to(data.roomId).emit('notification', {
-        message: data.message,
-        type: 'message',
-      });
+    // Join user's personal room for notifications
+    socket.on('joinUserRoom', (userId: string) => {
+      const room = `user-${userId}`;
+      void socket.join(room);
+      console.log(`[socket] ${socket.id} joined user room: ${room}`);
+    });
+
+    // Leave user's personal room
+    socket.on('leaveUserRoom', (userId: string) => {
+      const room = `user-${userId}`;
+      void socket.leave(room);
+      console.log(`[socket] ${socket.id} left user room: ${room}`);
     });
 
     // Handle disconnection
     socket.on('disconnect', (reason) => {
-      console.info(`User disconnected: ${socket.data.userId}, reason: ${reason}`);
-      socket.broadcast.emit('userDisconnected', { userId: socket.data.userId });
+      console.log('[socket] Client disconnected:', socket.id, 'Reason:', reason);
     });
-
-    // Handle errors
+    
     socket.on('error', (error) => {
-      console.error(`Socket error for user ${socket.data.userId}:`, error);
-      socket.emit('error', { message: 'An error occurred' });
+      console.error('[socket] Error:', error);
     });
   });
 
@@ -99,38 +77,98 @@ export function initializeSocket(httpServer: HttpServer): Server {
 /**
  * Get the Socket.IO server instance
  */
-export function getIO(): Server<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
-> {
+export function getIO(): Server {
   if (!io) {
-    throw new Error('Socket.IO not initialized');
+    throw new Error('Socket.io not initialized');
   }
   return io;
 }
 
 /**
- * Emit to a specific user
+ * Broadcast queue update to all users watching a queue
  */
-export function emitToUser(userId: string, event: keyof ServerToClientEvents, data: unknown): void {
-  io.to(`user:${userId}`).emit(event as 'notification', data as { message: string; type: string });
+export function broadcastQueueUpdate(queueId: string, queue: unknown): void {
+  const room = `queue-${queueId}`;
+  const sockets = getIO().sockets.adapter.rooms.get(room);
+  console.log(`[socket] Broadcasting queueUpdated to room ${room} (${sockets?.size || 0} clients)`);
+  getIO().to(room).emit('queueUpdated', { queue });
 }
 
 /**
- * Emit to a room
+ * Notify a specific user that they have been called
  */
-export function emitToRoom(roomId: string, event: keyof ServerToClientEvents, data: unknown): void {
-  io.to(roomId).emit(event as 'notification', data as { message: string; type: string });
+export function notifyUserCalled(
+  userId: string,
+  payload: { entryId: string; queueId: string; position: number }
+): void {
+  const room = `user-${userId}`;
+  const sockets = getIO().sockets.adapter.rooms.get(room);
+  console.log(`[socket] Notifying userCalled to room ${room} (${sockets?.size || 0} clients)`);
+  getIO().to(room).emit('userCalled', payload);
 }
 
 /**
- * Broadcast to all connected clients
+ * Notify a user about their position update (approaching front of queue)
  */
-export function broadcast(event: keyof ServerToClientEvents, data: unknown): void {
-  io.emit(event as 'notification', data as { message: string; type: string });
+export function notifyPositionUpdate(
+  userId: string,
+  payload: {
+    entryId: string;
+    queueId: string;
+    queueName: string;
+    restaurantName: string;
+    newPosition: number;
+    message: string;
+  }
+): void {
+  const room = `user-${userId}`;
+  const sockets = getIO().sockets.adapter.rooms.get(room);
+  console.log(`[socket] Notifying positionUpdate to room ${room} (${sockets?.size || 0} clients)`);
+  getIO().to(room).emit('positionUpdate', payload);
 }
 
-export default { initializeSocket, getIO, emitToUser, emitToRoom, broadcast };
+/**
+ * Notify users in a queue that it has been deleted
+ */
+export function notifyQueueDeleted(
+  queueId: string,
+  payload: {
+    queueId: string;
+    queueName: string;
+    restaurantName: string;
+    message: string;
+  }
+): void {
+  const room = `queue-${queueId}`;
+  const sockets = getIO().sockets.adapter.rooms.get(room);
+  console.log(`[socket] Notifying queueDeleted to room ${room} (${sockets?.size || 0} clients)`);
+  getIO().to(room).emit('queueDeleted', payload);
+}
 
+/**
+ * Notify a specific user that the queue they were in has been deleted
+ */
+export function notifyUserQueueDeleted(
+  userId: string,
+  payload: {
+    queueId: string;
+    queueName: string;
+    restaurantName: string;
+    message: string;
+  }
+): void {
+  const room = `user-${userId}`;
+  const sockets = getIO().sockets.adapter.rooms.get(room);
+  console.log(`[socket] Notifying queueDeleted to user room ${room} (${sockets?.size || 0} clients)`);
+  getIO().to(room).emit('queueDeleted', payload);
+}
+
+export default {
+  initSocket,
+  getIO,
+  broadcastQueueUpdate,
+  notifyUserCalled,
+  notifyPositionUpdate,
+  notifyQueueDeleted,
+  notifyUserQueueDeleted,
+};

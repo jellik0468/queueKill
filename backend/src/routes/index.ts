@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
+import queueRoutes from './queue.routes';
+import restaurantRoutes from './restaurant.routes';
 
 const router = Router();
 
@@ -14,10 +16,8 @@ router.get('/health', (_req, res) => {
 
 // API routes
 router.use('/auth', authRoutes);
-
-// Add more routes here as your application grows
-// router.use('/users', userRoutes);
-// router.use('/queues', queueRoutes);
+router.use('/queues', queueRoutes);
+router.use('/restaurants', restaurantRoutes);
 
 export default router;
 

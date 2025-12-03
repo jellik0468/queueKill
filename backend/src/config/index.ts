@@ -20,6 +20,11 @@ export const config = {
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
   },
 
+  // App URLs
+  app: {
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  },
+
   // CORS
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',

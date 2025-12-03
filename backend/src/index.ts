@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import { createApp } from './app';
 import { config, validateEnv } from './config';
-import { initializeSocket } from './sockets';
+import { initSocket } from './sockets';
 import prisma from './lib/prisma';
 
 /**
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   const httpServer = createServer(app);
 
   // Initialize Socket.IO
-  initializeSocket(httpServer);
+  initSocket(httpServer);
 
   // Connect to database
   try {

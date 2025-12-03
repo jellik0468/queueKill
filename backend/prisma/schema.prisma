@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
 }
 
 enum Role {
@@ -27,7 +28,7 @@ model User {
   phone        String?
   role         Role
 
-  restaurant   Restaurant?  // owner has one restaurant
+  restaurant   Restaurant?
   queueEntries QueueEntry[]
 
   createdAt    DateTime     @default(now())
@@ -35,9 +36,13 @@ model User {
 }
 
 model Restaurant {
-  id        String   @id @default(cuid())
-  name      String
-  address   String
+  id              String   @id @default(cuid())
+  name            String
+  address         String
+  type            String?
+  description     String?
+  longDescription String?
+  menuText        String?
 
   ownerId   String   @unique
   owner     User     @relation(fields: [ownerId], references: [id])

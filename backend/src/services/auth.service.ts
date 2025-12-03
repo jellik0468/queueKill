@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signToken } from '../utils/jwt';
 import { RegisterCustomerInput, RegisterOwnerInput, LoginInput } from '../validators/auth.validators';
+import { AppError } from '../middleware/error.middleware';
 
 // Response types
 interface AuthResponse {
@@ -20,6 +21,12 @@ interface OwnerAuthResponse extends AuthResponse {
     id: string;
     name: string;
     address: string;
+    type: string | null;
+    description: string | null;
+  };
+  queue?: {
+    id: string;
+    name: string;
   };
 }
 
@@ -34,7 +41,7 @@ class AuthService {
     });
 
     if (existingUser) {
-      throw new Error('Email already registered');
+      throw new AppError('Email already registered', 409);
     }
 
     // Hash password
@@ -78,13 +85,13 @@ class AuthService {
     });
 
     if (existingUser) {
-      throw new Error('Email already registered');
+      throw new AppError('Email already registered', 409);
     }
 
     // Hash password
     const passwordHash = await hashPassword(input.password);
 
-    // Use transaction to create user and restaurant together
+    // Use transaction to create user, restaurant, and optionally initial queue
     const result = await prisma.$transaction(async (tx) => {
       // Create user with OWNER role
       const user = await tx.user.create({
@@ -97,16 +104,31 @@ class AuthService {
         },
       });
 
-      // Create restaurant linked to owner
+      // Create restaurant linked to owner with new fields
       const restaurant = await tx.restaurant.create({
         data: {
           name: input.restaurantName,
           address: input.restaurantAddress,
+          type: input.restaurantType,
+          description: input.restaurantDescription,
+          longDescription: input.restaurantLongDescription,
+          menuText: input.restaurantMenuText,
           ownerId: user.id,
         },
       });
 
-      return { user, restaurant };
+      // Optionally create initial queue
+      let queue = null;
+      if (input.initialQueueName) {
+        queue = await tx.queue.create({
+          data: {
+            name: input.initialQueueName,
+            restaurantId: restaurant.id,
+          },
+        });
+      }
+
+      return { user, restaurant, queue };
     });
 
     // Generate token
@@ -115,7 +137,7 @@ class AuthService {
       role: result.user.role,
     });
 
-    return {
+    const response: OwnerAuthResponse = {
       user: {
         id: result.user.id,
         email: result.user.email,
@@ -126,9 +148,20 @@ class AuthService {
         id: result.restaurant.id,
         name: result.restaurant.name,
         address: result.restaurant.address,
+        type: result.restaurant.type,
+        description: result.restaurant.description,
       },
       token,
     };
+
+    if (result.queue) {
+      response.queue = {
+        id: result.queue.id,
+        name: result.queue.name,
+      };
+    }
+
+    return response;
   }
 
   /**
@@ -141,14 +174,14 @@ class AuthService {
     });
 
     if (!user) {
-      throw new Error('Invalid email or password');
+      throw new AppError('Invalid email or password', 401);
     }
 
     // Compare password
     const isValidPassword = await comparePassword(input.password, user.passwordHash);
 
     if (!isValidPassword) {
-      throw new Error('Invalid email or password');
+      throw new AppError('Invalid email or password', 401);
     }
 
     // Generate JWT

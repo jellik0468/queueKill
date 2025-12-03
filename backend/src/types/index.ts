@@ -79,12 +79,48 @@ export interface ServerToClientEvents {
   userConnected: (data: { userId: string }) => void;
   userDisconnected: (data: { userId: string }) => void;
   error: (data: { message: string }) => void;
+  // Queue events
+  queueUpdated: (data: QueueUpdatePayload) => void;
+  userCalled: (data: UserCalledPayload) => void;
+  positionUpdate: (data: PositionUpdatePayload) => void;
+  queueDeleted: (data: QueueDeletedPayload) => void;
 }
 
 export interface ClientToServerEvents {
   joinRoom: (roomId: string) => void;
   leaveRoom: (roomId: string) => void;
   sendMessage: (data: { roomId: string; message: string }) => void;
+  // Queue events
+  joinQueueRoom: (queueId: string) => void;
+  leaveQueueRoom: (queueId: string) => void;
+  joinUserRoom: (userId: string) => void;
+}
+
+// Queue Socket Payloads
+export interface QueueUpdatePayload {
+  queue: unknown; // Full queue object with entries
+}
+
+export interface UserCalledPayload {
+  entryId: string;
+  queueId: string;
+  position: number;
+}
+
+export interface PositionUpdatePayload {
+  entryId: string;
+  queueId: string;
+  queueName: string;
+  restaurantName: string;
+  newPosition: number;
+  message: string;
+}
+
+export interface QueueDeletedPayload {
+  queueId: string;
+  queueName: string;
+  restaurantName: string;
+  message: string;
 }
 
 export interface InterServerEvents {
@@ -95,5 +131,28 @@ export interface SocketData {
   userId: string;
   email: string;
   role: Role;
+}
+
+// Queue Types
+export interface CreateQueueInput {
+  name: string;
+}
+
+export interface JoinQueueInput {
+  name: string;
+  phone?: string;
+  groupSize: number;
+}
+
+export interface CallNextInput {
+  queueId: string;
+}
+
+export interface QueueIdParam {
+  queueId: string;
+}
+
+export interface QueueEntryIdParam {
+  entryId: string;
 }
 
