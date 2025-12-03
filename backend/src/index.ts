@@ -33,7 +33,8 @@ async function main(): Promise<void> {
   const externalUrl = process.env.RENDER_EXTERNAL_URL || `http://${config.host}:${config.port}`;
   
   // Start server
-  httpServer.listen(config.port, config.host, () => {
+  // explicitly bind to '0.0.0.0' instead of config.host
+  httpServer.listen(config.port, '0.0.0.0', () => {
     console.info(`
 🚀 Server is running!
     
