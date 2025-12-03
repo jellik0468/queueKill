@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+import { User, Queue } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signToken } from '../utils/jwt';
@@ -119,7 +119,7 @@ class AuthService {
       });
 
       // Optionally create initial queue
-      let queue = null;
+      let queue: Queue | null = null;
       if (input.initialQueueName) {
         queue = await tx.queue.create({
           data: {
