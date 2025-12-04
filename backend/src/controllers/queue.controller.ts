@@ -417,8 +417,17 @@ export async function generateQueueQRCodeHandler(
     const buffer = await queueService.generateQueueQRCode(queueId, queue.restaurantId);
 
     // Send as PNG image
+    // Required for cross-origin <img> loading
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    // PNG headers
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Content-Disposition', `inline; filename="queue-${queueId}.png"`);
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="queue-${queueId}.png"`
+    );
+
     res.send(buffer);
   } catch (error) {
     next(error);
