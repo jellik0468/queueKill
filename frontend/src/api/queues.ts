@@ -115,8 +115,7 @@ export const queuesApi = {
    * Get QR code URL for a queue
    */
   getQueueQRCodeUrl: (queueId: string): string => {
-    const baseUrl = import.meta.env.VITE_API_URL || '/api';
-    return `${baseUrl}/queues/${queueId}/qrcode`;
+    return `${import.meta.env.VITE_PUBLIC_URL}/api/queues/${queueId}/qrcode`;
   },
 };
 
